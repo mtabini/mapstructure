@@ -514,6 +514,13 @@ func (d *Decoder) decodeSlice(name string, data interface{}, val reflect.Value) 
 func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.Indirect(reflect.ValueOf(data))
 	dataValKind := dataVal.Kind()
+	valType := val.Type()
+
+	if valType.PkgPath() == "time" && valType.Name() == "Time" {
+		val.Set(dataVal)
+		return nil
+	}
+
 	if dataValKind != reflect.Map {
 		return fmt.Errorf("'%s' expected a map, got '%s'", name, dataValKind)
 	}
@@ -552,6 +559,10 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 			fieldType := structType.Field(i)
 
 			if fieldType.Anonymous {
+				if fieldType.Tag.Get(d.config.TagName)[0] == '-' {
+					continue
+				}
+
 				fieldKind := fieldType.Type.Kind()
 				if fieldKind != reflect.Struct {
 					errors = appendErrors(errors,
