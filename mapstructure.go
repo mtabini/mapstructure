@@ -92,8 +92,9 @@ type Metadata struct {
 // given Go native structure. val must be a pointer to a struct.
 func Decode(m interface{}, rawVal interface{}) error {
 	config := &DecoderConfig{
-		Metadata: nil,
-		Result:   rawVal,
+		Metadata:         nil,
+		Result:           rawVal,
+		WeaklyTypedInput: true,
 	}
 
 	decoder, err := NewDecoder(config)
@@ -240,6 +241,8 @@ func (d *Decoder) decodeString(name string, data interface{}, val reflect.Value)
 	case dataKind == reflect.Uint && d.config.WeaklyTypedInput:
 		val.SetString(strconv.FormatUint(dataVal.Uint(), 10))
 	case dataKind == reflect.Float32 && d.config.WeaklyTypedInput:
+		val.SetString(strconv.FormatFloat(dataVal.Float(), 'f', -1, 64))
+	case dataKind == reflect.Float64:
 		val.SetString(strconv.FormatFloat(dataVal.Float(), 'f', -1, 64))
 	case dataKind == reflect.Slice && d.config.WeaklyTypedInput:
 		dataType := dataVal.Type()
