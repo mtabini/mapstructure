@@ -10,10 +10,12 @@ package mapstructure
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // DecodeHookFunc is the callback function that can be used for
@@ -515,7 +517,40 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 	valType := val.Type()
 
 	if valType.PkgPath() == "time" && valType.Name() == "Time" {
-		val.Set(dataVal)
+		parsed := false
+
+		if dataVal.Type().Name() == "float64" {
+			sec, frac := math.Modf(dataVal.Float())
+			timeVal := time.Unix(int64(sec), int64(math.Trunc(frac*1000000000)))
+			val.Set(reflect.ValueOf(timeVal))
+			parsed = true
+
+		} else if dataVal.Type().Name() == "string" {
+			formats := []string{
+				time.ANSIC,
+				time.UnixDate,
+				time.RubyDate,
+				time.RFC822,
+				time.RFC822Z,
+				time.RFC850,
+				time.RFC1123,
+				time.RFC1123Z,
+				time.RFC3339,
+				time.RFC3339Nano}
+			for _, format := range formats {
+				timeVal, err := time.Parse(format, dataVal.String())
+				if err == nil {
+					val.Set(reflect.ValueOf(timeVal))
+					parsed = true
+					break
+				}
+			}
+		}
+
+		if !parsed {
+			val.Set(dataVal)
+		}
+
 		return nil
 	}
 
